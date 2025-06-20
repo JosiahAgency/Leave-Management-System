@@ -8,6 +8,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 class UserSeeder extends Seeder
 {
@@ -22,7 +23,7 @@ class UserSeeder extends Seeder
                 'name' => 'admin',
                 'email' => 'admin@admin.com',
                 'departmentID' => 1,
-                'supervisor' => 'System', 
+                'supervisor' => 'System',
                 'job_title' => 'Administrator',
                 'password' => Hash::make('1234'),
                 'email_verified_at' => now(),
@@ -34,7 +35,8 @@ class UserSeeder extends Seeder
             User::create($admins);
         }
 
-        $departments = Departments::all(); 
+
+        $departments = Departments::all();
 
         $jobTitles = [
             'Software Engineer',

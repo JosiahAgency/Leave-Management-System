@@ -8,5 +8,8 @@ class LeaveType extends Model
 {
     protected $fillable = [
         'name',
+        'leaveRules',
+        'numberOfDays',
+        'weekendsInclusive'
     ];
 }

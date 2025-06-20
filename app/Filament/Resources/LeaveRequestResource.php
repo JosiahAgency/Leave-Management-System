@@ -5,7 +5,9 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\LeaveRequestResource\Pages;
 use App\Filament\Resources\LeaveRequestResource\RelationManagers;
 use App\Models\LeaveRequest;
+use App\Models\LeaveType;
 use App\Models\User;
+use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\DeleteAction;
@@ -38,7 +40,7 @@ class LeaveRequestResource extends Resource
     {
         return $form
             ->schema([
-                Fieldset::make('Basic Details')
+                Fieldset::make('User Details')
                     ->schema([
                         Select::make('userID')
                             ->label('Staff Name')
@@ -65,33 +67,110 @@ class LeaveRequestResource extends Resource
                                 return $user?->supervisor ?? null;
                             })
                             ->readOnly(),
+                    ])->columns(2),
+
+                Fieldset::make('Leave Details')
+                    ->schema([
                         Select::make('leaveTypeID')
                             ->preload()
                             ->required()
                             ->searchable()
                             ->relationship('leaveType', 'name')
-                            ->live(),
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, ?string $state) {
+                                if ($state && $leaveType = LeaveType::find($state)) {
+                                    $set('weekendInclusive', $leaveType->weekendsInclusive);
+                                    $set('numberOfDays', $leaveType->numberOfDays);
+                                }
+                            }),
+                        DatePicker::make('startDate')
+                            ->required()
+                            ->minDate(now())
+                            ->weekStartsOnSunday()
+                            ->reactive()
+                            ->native(false)
+                            ->afterStateUpdated(function (Set $set, ?string $state, $get) {
+                                if ($state && $get('numberOfDays')) {
+                                    $startDate = Carbon::parse($state);
+                                    $numberOfDays = (int)$get('numberOfDays');
+                                    $weekendInclusive = $get('weekendInclusive') === 'Yes';
+
+                                    if ($weekendInclusive) {
+                                        $endDate = $startDate->copy()->addDays($numberOfDays - 1)->toDateString();
+                                    } else {
+                                        $count = 0;
+                                        $endDate = $startDate->copy();
+                                        while ($count < $numberOfDays) {
+                                            if (!$endDate->isWeekend()) {
+                                                $count++;
+                                            }
+                                            if ($count < $numberOfDays) {
+                                                $endDate->addDay();
+                                            }
+                                        }
+                                        $endDate = $endDate->toDateString();
+                                    }
+                                    $set('endDate', $endDate);
+                                }
+                                //                                if ($get('weekendInclusive') == 1) {
+//                                    if ($state && $get('numberOfDays') && $get('weekendInclusive')) {
+//                                        $endDate = Carbon::parse($state)->addDays($get('numberOfDays') - 1)->toDateString();
+//                                        $set('endDate', $endDate);
+//                                    }
+//                                } else {
+//
+//                                }
+                            }),
+                        TextInput::make('weekendInclusive')
+                            ->disabled(),
+                        TextInput::make('numberOfDays')
+                            ->required()
+                            ->numeric()
+                            ->reactive()
+                            ->disabled()
+                            ->afterStateUpdated(function (Set $set, ?string $state, $get) {
+//                                if ($state && $get('startDate')) {
+//                                    $endDate = Carbon::parse($get('startDate'))->addDays($state - 1)->toDateString();
+//                                    $set('endDate', $endDate);
+//                                }
+                                if ($state && $get('startDate')) {
+                                    $startDate = Carbon::parse($get('startDate'));
+                                    $numberOfDays = $state;
+
+                                    if ($get('weekendInclusive') === 'Yes') {
+                                        $endDate = $startDate->copy()->addDays($numberOfDays - 1)->toDateString();
+                                        $set('endDate', $endDate);
+
+                                    } else {
+                                        $count = 0;
+                                        $endDate = $startDate->copy();
+                                        while ($count < $numberOfDays) {
+                                            if (!$endDate->isWeekend()) {
+                                                $count++;
+                                            }
+                                            if ($count < $numberOfDays) {
+                                                $endDate->addDay();
+                                            }
+                                        }
+                                        $endDate = $endDate->toDateString();
+                                    }
+                                    $set('endDate', $endDate);
+                                }
+                            }),
+                        DatePicker::make('endDate')
+                            ->required()
+                            ->disabled()
+                            ->dehydrated(),
                         Select::make('status')
+                            ->label('Request Status')
                             ->options([
                                 'Pending' => 'Pending',
                                 'Denied' => 'Denied',
                                 'Granted' => 'Granted',
                             ])
-                            ->hiddenOn('create')
-                            ->default('Pending')
-                    ])->columns(3),
-                Fieldset::make('Dates')
-                    ->schema([
-                        DatePicker::make('startDate')
-                            ->required()
-                            ->minDate(now())
-                            ->weekStartsOnSunday()
-                            ->native(false),
-                        DatePicker::make('endDate')
-                            ->required()
-                            ->minDate(now())
-                            ->weekStartsOnSunday()
-                            ->native(false),
+                            ->disabled()
+                            ->default('Pending'),
+//                            ->hiddenOn('create')
                     ]),
                 Fieldset::make('Reason')
                     ->schema([
@@ -129,25 +208,25 @@ class LeaveRequestResource extends Resource
             ])
             ->actions([
                 ActionGroup::make([
-                    Action::make('changeStatus')
-                        ->icon('heroicon-m-adjustments-horizontal')
-                        ->form([
-                            Select::make('status')
-                                ->label('New Status')
-                                ->options([
-                                    'Pending' => 'Pending',
-                                    'Granted' => 'Granted',
-                                    'Denied' => 'Denied',
-                                ])
-                                ->required(),
-                        ])
-                        ->action(function (array $data, LeaveRequest $record): void {
-                            $record->update([
-                                'status' => $data['status'],
-                            ]);
-                        })
-                        ->color('warning')
-                        ->visible(fn(LeaveRequest $record) => true),
+//                    Action::make('changeStatus')
+//                        ->icon('heroicon-m-adjustments-horizontal')
+//                        ->form([
+//                            Select::make('status')
+//                                ->label('New Status')
+//                                ->options([
+//                                    'Pending' => 'Pending',
+//                                    'Granted' => 'Granted',
+//                                    'Denied' => 'Denied',
+//                                ])
+//                                ->required(),
+//                        ])
+//                        ->action(function (array $data, LeaveRequest $record): void {
+//                            $record->update([
+//                                'status' => $data['status'],
+//                            ]);
+//                        })
+//                        ->color('warning')
+//                        ->visible(fn(LeaveRequest $record) => true),
                     ViewAction::make(),
                     EditAction::make(),
                     DeleteAction::make(),
@@ -159,6 +238,12 @@ class LeaveRequestResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $user = auth()->user();
+        return parent::getEloquentQuery()->where('id', $user->id);
     }
 
     public static function getRelations(): array

@@ -41,7 +41,12 @@ class UsersResource extends Resource
                     ->preload()
                     ->live()
                     ->relationship('department', 'name'),
-
+                Select::make('roles')
+                    ->label('Role')
+                    ->searchable()
+                    ->preload()
+                    ->live()
+                    ->relationship('roles', 'name'),
             ]);
     }
 

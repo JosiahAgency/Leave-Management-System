@@ -6,6 +6,7 @@ use App\Filament\Resources\LeaveTypeResource\Pages;
 use App\Filament\Resources\LeaveTypeResource\RelationManagers;
 use App\Models\LeaveType;
 use Filament\Forms;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -29,7 +30,13 @@ class LeaveTypeResource extends Resource
             ->schema([
                 TextInput::make('name')
                     ->label('Leave Type')
-                    ->required()
+                    ->required(),
+                TextInput::make('numberOfDays')
+                    ->integer(),
+                Forms\Components\MarkdownEditor::make('leaveRules')
+                    ->label('Leave Rules'),
+                Checkbox::make('weekendsInclusive')
+                    ->required(),
             ]);
     }
 
@@ -42,6 +49,22 @@ class LeaveTypeResource extends Resource
                 TextColumn::make('name')
                     ->label('Leave Type')
                     ->searchable(),
+                TextColumn::make('numberOfDays')
+                    ->searchable(),
+                TextColumn::make('weekendsInclusive')
+                    ->badge()
+                    ->sortable()
+                    ->getStateUsing(function (LeaveType $value) {
+                        return $value->weekendsInclusive ? 'Yes' : 'No';
+                    })
+                    ->color(fn($state): string => match ($state) {
+                        'No' => 'info',
+                        'Yes' => 'warning',
+                    })
+                    ->searchable(),
+                TextColumn::make('leaveRules')
+                    ->wrap()
+                    ->label('Leave Rules')
             ])
             ->filters([
                 //

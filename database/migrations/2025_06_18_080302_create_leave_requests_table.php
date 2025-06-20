@@ -19,7 +19,11 @@ return new class extends Migration {
             $table->date('endDate');
             $table->text('reason')->nullable();
             $table->string('supportingDocument')->nullable();
-            $table->string('status')->default('Pending');
+            $table->enum('status', ['Pending', 'Granted', 'Denied'])->default('Pending');
+            $table->enum('hod_approval', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->enum('hr_approval', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->text('hod_comment')->nullable();
+            $table->text('hr_comment')->nullable();
             $table->timestamps();
         });
     }
