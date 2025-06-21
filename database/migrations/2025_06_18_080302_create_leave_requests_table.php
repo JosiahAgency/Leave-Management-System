@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->string('userID');
             $table->integer('leaveTypeID');
-            $table->string('supervisor');
+            $table->integer('departmentID');
             $table->date('startDate');
             $table->date('endDate');
             $table->text('reason')->nullable();
@@ -35,4 +35,5 @@ return new class extends Migration {
     {
         Schema::dropIfExists('leave_requests');
     }
+
 };

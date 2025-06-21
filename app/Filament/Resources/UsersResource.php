@@ -69,6 +69,7 @@ class UsersResource extends Resource
                     ->sortable(),
                 TextColumn::make('supervisor')->searchable(),
                 TextColumn::make('job_title')->searchable(),
+                Textcolumn::make('roles.name')->searchable()->sortable(),
 
             ])->defaultSort('updated_at', 'desc')
             ->filters([
