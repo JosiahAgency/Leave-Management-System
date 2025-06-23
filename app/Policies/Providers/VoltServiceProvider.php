@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Providers;
+namespace App\Policies\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\Volt\Volt;
