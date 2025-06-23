@@ -10,11 +10,29 @@ class ListLeaveRequests extends ListRecords
 {
         protected static string $resource = LeaveRequestResource::class;
 
+        protected static ?string $title = 'My Leave Requests';
+
         protected function getHeaderActions(): array
         {
-                return [
-                        Actions\CreateAction::make(),
+                $user = auth()->user();
+
+                $actions = [
+                        Actions\CreateAction::make()
+                                ->color('warning')
+                                ->icon('heroicon-o-arrow-down-on-square-stack')
+                                ->label('Apply for Leave'),
                 ];
+
+                if ($user->hasRole('admin') || $user->hasRole('manager') || $user->hasRole('humanResources')) {
+                        $actions [] =
+                                Actions\Action::make('approvals')
+                                        ->label('Requests Awaiting Approval')
+                                        ->color('danger')
+                                        ->icon('heroicon-o-bell-alert')
+                                        ->url('leave-requests/approvals');
+                }
+
+                return $actions;
         }
 
 }
