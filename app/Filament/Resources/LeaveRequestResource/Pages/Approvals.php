@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\LeaveRequestResource\Pages;
 
+use AlperenErsoy\FilamentExport\Actions\FilamentExportBulkAction;
 use App\Filament\Resources\LeaveRequestResource;
 use App\Models\LeaveRequest;
 use Filament\Actions;
@@ -51,7 +52,11 @@ class Approvals extends ListRecords
                                         })
                                         ->searchable()
                                         ->sortable(),
-                        ])->defaultSort('updated_at', 'desc')
+                        ])
+                        ->bulkActions([
+                                FilamentExportBulkAction::make('Export'),
+                        ])
+                        ->defaultSort('updated_at', 'desc')
                         ->actions($this->getTableActions())
                         ->emptyStateIcon('heroicon-o-bookmark')
                         ->emptyStateDescription('Once staff apply for leave and they are cleared by there departments then they shall visible for clearing');

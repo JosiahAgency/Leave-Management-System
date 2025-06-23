@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources;
 
+use AlperenErsoy\FilamentExport\Actions\FilamentExportBulkAction;
+use AlperenErsoy\FilamentExport\Actions\FilamentExportHeaderAction;
+use AlperenErsoy\FilamentExport\FilamentExport;
 use App\Filament\Resources\LeaveRequestResource\Pages;
 use App\Filament\Resources\LeaveRequestResource\RelationManagers;
 use App\Models\LeaveRequest;
@@ -220,6 +223,7 @@ class LeaveRequestResource extends Resource
                         ])
                         ->actions([
                                 ActionGroup::make([
+                                        FilamentExportBulkAction::make('Export'),
                                         ViewAction::make(),
                                         EditAction::make(),
                                         DeleteAction::make(),
@@ -227,6 +231,7 @@ class LeaveRequestResource extends Resource
                         ])
                         ->bulkActions([
                                 Tables\Actions\BulkActionGroup::make([
+                                        FilamentExportBulkAction::make('Export'),
                                         Tables\Actions\DeleteBulkAction::make(),
                                 ]),
                         ]);
