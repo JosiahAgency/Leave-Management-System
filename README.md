@@ -69,7 +69,7 @@ php artisan migrate --seed
 ### 5. Serve the Application
 
 ```bash
-php artisan serve
+composer run dev
 ```
 
 Access the application at `http://localhost:8000`
