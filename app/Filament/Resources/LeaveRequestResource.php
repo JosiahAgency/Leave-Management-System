@@ -79,30 +79,6 @@ class LeaveRequestResource extends Resource
                         ])->columns(2),
 
                     Forms\Components\Wizard\Step::make('Leave Details')
-                        ->afterValidation(function (array $data) {
-                            $user = auth()->user();
-
-                            $start = \Carbon\Carbon::parse($data['start_date']);
-                            $end = \Carbon\Carbon::parse($data['end_date'])->endOfDay();
-
-                            $overlap = \App\Models\LeaveRequest::query()
-                                ->where('user_id', $user->id)
-                                ->where(function ($query) use ($start, $end) {
-                                    $query->whereBetween('start_date', [$start, $end])
-                                        ->orWhereBetween('end_date', [$start, $end])
-                                        ->orWhere(function ($query) use ($start, $end) {
-                                            $query->where('start_date', '<', $start)
-                                                ->where('end_date', '>', $end);
-                                        });
-                                })
-                                ->exists();
-
-                            if ($overlap) {
-                                throw ValidationException::withMessages([
-                                    'start_date' => 'You already have a leave request that overlaps with this date range.',
-                                ]);
-                            }
-                        })
                         ->icon('heroicon-o-newspaper')
                         ->completedIcon('heroicon-m-hand-thumb-up')
                         ->schema([
@@ -111,6 +87,30 @@ class LeaveRequestResource extends Resource
                                     DatePicker::make('startDate')
                                         ->required()
                                         ->minDate(now())
+                                        ->disabledDates(function () {
+                                            $user = auth()->user();
+
+                                            $leaveRequests = LeaveRequest::query()
+                                                ->where('id', $user->id)
+                                                ->get(['startDate', 'endDate']);
+
+                                            $disabledDates = [];
+
+                                            foreach ($leaveRequests as $leaveRequest) {
+                                                $start = \Carbon\Carbon::parse($leaveRequest->startDate);
+                                                $end = \Carbon\Carbon::parse($leaveRequest->endDate);
+//                                                $includeWeekends = strtolower($leaveRequest->weekendInclusive ?? '') === 'Yes';
+
+                                                while ($start->lte($end)) {
+                                                    if (!$start->isWeekend()) {
+                                                        $disabledDates[] = $start->toDateString();
+                                                    }
+                                                    $start->addDay();
+                                                }
+                                            }
+
+                                            return $disabledDates;
+                                        })
                                         ->weekStartsOnSunday()
                                         ->reactive()
                                         ->native(false)
@@ -172,8 +172,7 @@ class LeaveRequestResource extends Resource
                                     DatePicker::make('endDate')
                                         ->required()
                                         ->disabled()
-                                        ->dehydrated(),
-                                ]),
+                                        ->dehydrated(),]),
                             Forms\Components\Hidden::make('status')
                                 ->default('Pending'),
 //                                                        Select::make('status')
@@ -185,13 +184,11 @@ class LeaveRequestResource extends Resource
 //                                                                ])
 //                                                                ->disabled()
 //                                                                ->default('Pending'),
-                            MarkdownEditor::make('reason'),
-                        ]),
-                ])->columnSpanFull(),
-            ]);
+                            MarkdownEditor::make('reason'),]),])->columnSpanFull(),]);
     }
 
-    public static function table(Table $table): Table
+    public
+    static function table(Table $table): Table
     {
         return $table
             ->columns([
@@ -263,20 +260,23 @@ class LeaveRequestResource extends Resource
             ]);
     }
 
-    public static function getEloquentQuery(): Builder
+    public
+    static function getEloquentQuery(): Builder
     {
         $user = Auth::user();
         return parent::getEloquentQuery()->where('userID', $user->id);
     }
 
-    public static function getRelations(): array
+    public
+    static function getRelations(): array
     {
         return [
             //
         ];
     }
 
-    public static function getPages(): array
+    public
+    static function getPages(): array
     {
         return [
             'index' => Pages\ListLeaveRequests::route('/'),

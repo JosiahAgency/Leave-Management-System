@@ -26,7 +26,32 @@ class LeaveRequest extends Model
 
             $leaveRequest->user->decrement('leaveDays', $daysRequested);
         });
+
+        static::deleting(function ($leaveRequest) {
+            $user = $leaveRequest->user;
+
+            // Calculate the number of leave days
+            $start = \Carbon\Carbon::parse($leaveRequest->startDate);
+            $end = \Carbon\Carbon::parse($leaveRequest->endDate);
+
+            $count = 0;
+            $date = $start->copy();
+
+            // If the leave included weekends or not
+            $includeWeekends = $leaveRequest->weekendsInclusive === 'Yes';
+
+            while ($date->lte($end)) {
+                if ($includeWeekends || !$date->isWeekend()) {
+                    $count++;
+                }
+                $date->addDay();
+            }
+
+            // Add the days back to user's leave_days
+            $user->increment('leaveDays', $count);
+        });
     }
+
 
     public function user()
     {
