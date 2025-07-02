@@ -25,6 +25,7 @@ class UserSeeder extends Seeder
             'supervisor' => 'System',
             'job_title' => 'Administrator',
             'password' => Hash::make('1234'),
+            'leaveDays' => 21,
             'email_verified_at' => now(),
             'remember_token' => Str::random(10),
         ]);

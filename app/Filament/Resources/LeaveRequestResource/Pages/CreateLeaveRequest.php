@@ -15,4 +15,5 @@ class CreateLeaveRequest extends CreateRecord
         $resource = static::getResource();
         return $resource::getUrl('index');
     }
+
 }

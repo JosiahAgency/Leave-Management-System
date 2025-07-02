@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->string('job_title');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->integer('leaveDays')->default(21);
             $table->rememberToken();
             $table->timestamps();
         });

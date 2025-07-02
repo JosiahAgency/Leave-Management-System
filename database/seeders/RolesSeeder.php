@@ -28,6 +28,11 @@ class RolesSeeder extends Seeder
             Role::firstOrCreate(['name' => $role]);
         }
 
+        $adminRole = Role::where('name', 'admin')->first();
+        if ($adminRole) {
+            $allPermissions = Permission::all();
+            $adminRole->syncPermissions($allPermissions);
+        }
 
     }
 }

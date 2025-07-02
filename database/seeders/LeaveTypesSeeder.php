@@ -97,6 +97,12 @@ class LeaveTypesSeeder extends Seeder
                 'leaveRules' => 'For unexpected, urgent personal matters.',
                 'numberOfDays' => 2,
                 'weekendsInclusive' => 'No',
+            ],
+            [
+                'name' => 'Other...',
+                'leaveRules' => 'User specifies',
+                'numberOfDays' => 0,
+                'weekendsInclusive' => 'Yes',
             ]
         ];
 

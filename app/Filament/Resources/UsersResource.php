@@ -63,6 +63,8 @@ class UsersResource extends Resource
                     ->iconColor('primary')
                     ->color('primary')
                     ->searchable(),
+                TextColumn::make('leaveDays')
+                    ->label('Leave Days'),
                 TextColumn::make('department.name')
                     ->label('Department')
                     ->searchable()
