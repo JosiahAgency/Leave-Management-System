@@ -10,7 +10,7 @@ class UserLeaveDaysCount extends BaseWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Leave Days Left: ', auth()->user()?->leaveDays ?? 0)
+            Stat::make('Number of Leave Days Left:', auth()->user()?->leaveDays ?? 0),
         ];
     }
 }
