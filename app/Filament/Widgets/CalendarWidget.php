@@ -3,6 +3,13 @@
 namespace App\Filament\Widgets;
 
 use App\Models\LeaveRequest;
+use App\Models\LeaveType;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Fieldset;
+use Filament\Forms\Components\MarkdownEditor;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Set;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -11,6 +18,18 @@ use Saade\FilamentFullCalendar\Widgets\FullCalendarWidget;
 class CalendarWidget extends FullCalendarWidget
 {
     public string|null|\Illuminate\Database\Eloquent\Model $model = LeaveRequest::class;
+
+    protected function headerActions(): array
+    {
+        return [
+        ];
+    }
+
+    protected function modalActions(): array
+    {
+        return [
+        ];
+    }
 
     public function fetchEvents(array $fetchInfo): array
     {
@@ -48,6 +67,42 @@ class CalendarWidget extends FullCalendarWidget
             },
             'allDay' => true,
         ])->toArray();
+    }
+
+    public function getFormSchema(): array
+    {
+        return [
+            Fieldset::make('')
+                ->schema([
+                    Select::make('userID')
+                        ->label('Staff Name')
+                        ->disabled()
+                        ->relationship('user', 'name'),
+                    Select::make('departmentID')
+                        ->label('Department')
+                        ->disabled()
+                        ->relationship('department', 'name')
+
+                ]),
+            Fieldset::make('')
+                ->schema([
+                    Select::make('leaveTypeID')
+                        ->label('Type of Leave')
+                        ->disabled()
+                        ->relationship('leaveType', 'name'),
+                    TextInput::make('status')
+                        ->readOnly(),
+                    TextInput::make('startDate')
+                        ->readOnly(),
+                    TextInput::make('endDate')
+                        ->readOnly(),
+                ]),
+            Fieldset::make('')
+                ->schema([
+                    TextInput::make('reason')
+                        ->readOnly(),
+                ])->columns(1)
+        ];
     }
 }
 

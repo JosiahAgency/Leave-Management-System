@@ -12,12 +12,32 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Support\Facades\Log;
 
 class Approvals extends ListRecords
 {
     protected static string $resource = LeaveRequestResource::class;
 
-    protected static ?string $title = 'Requests Awaiting for Approval';
+    protected static ?string $title = 'Requests Awaiting Approval';
+
+    protected static ?string $navigationIcon = 'heroicon-s-lock-open';
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = LeaveRequest::query()
+            ->where('status', 'Pending')
+            ->count();
+        return $count;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+//        return static::getModel()::count() > 10 ? 'warning' : 'primary';
+        $count = LeaveRequest::query()
+            ->where('status', 'Pending')
+            ->count();
+        return $count > 0 ? 'danger' : 'success';
+    }
 
     public function table(Table $table): Table
     {
@@ -94,64 +114,73 @@ class Approvals extends ListRecords
         $user = auth()->user();
         $actions = [];
 
-        if ($user->hasAnyRole(['admin', 'humanResources'])) {
-            $actions[] = Action::make('approve')
-                ->label('HR Approve')
-                ->color('success')
-                ->hidden(function ($record) {
-                    return $record->hr_approval === 'approved' ? true : false;
-                })
-                ->requiresConfirmation()
-                ->action(function ($record) {
-                    $record->hr_approval = 'approved';
-                    $record->status = 'Granted';
-                    $record->save();
-                });
+        $hrApprove = Action::make('approve')
+            ->label('HR Approve')
+            ->color('success')
+            ->hidden(function ($record) {
+                return $record->hr_approval === 'approved' ? true : false;
+            })
+            ->requiresConfirmation()
+            ->action(function ($record) {
+                Log::info('HR Approve Clicked');
+                $record->hr_approval = 'approved';
+                $record->status = 'Granted';
+                $record->save();
+            });
 
-            $actions[] = Action::make('reject')
-                ->label('HR Reject')
-                ->color('danger')
-                ->hidden(function ($record) {
-                    return $record->hr_approval === 'rejected' ? true : false;
-                })
-                ->requiresConfirmation()
-                ->action(function ($record) {
-                    $record->hr_approval = 'rejected';
-                    $record->status = 'Denied';
-                    $record->save();
-                });
+        $hrReject = Action::make('reject')
+            ->label('HR Reject')
+            ->color('danger')
+            ->hidden(function ($record) {
+                return $record->hr_approval === 'rejected' ? true : false;
+            })
+            ->requiresConfirmation()
+            ->action(function ($record) {
+                $record->hr_approval = 'rejected';
+                $record->status = 'Denied';
+                $record->save();
+            });
+
+        $hodApprove = Action::make('approve')
+            ->label('HOD Approve')
+            ->hidden(function ($record) {
+                return $record->hod_approval === 'approved' ? true : false;
+            })
+            ->color('success')
+            ->requiresConfirmation()
+            ->action(function ($record) {
+                $record->hod_approval = 'approved';
+                $record->save();
+            });
+
+        $hodReject = Action::make('reject')
+            ->label('HOD Reject')
+            ->color('danger')
+            ->hidden(function ($record) {
+                return $record->hod_approval === 'rejected' ? true : false;
+            })
+            ->requiresConfirmation()
+            ->action(function ($record) {
+                $record->hod_approval = 'rejected';
+                $record->save();
+            });
+
+        if ($user->hasRole('admin')) {
+            $actions = [$hrApprove, $hrReject, $hodApprove, $hodReject];
         }
 
-        if ($user->hasAnyRole(['admin', 'manager'])) {
-            $actions[] = Action::make('approve')
-                ->label('HOD Approve')
-                ->hidden(function ($record) {
-                    return $record->hod_approval === 'approved' ? true : false;
-                })
-                ->color('success')
-                ->requiresConfirmation()
-                ->action(function ($record) {
-                    $record->hod_approval = 'approved';
-                    $record->save();
-                });
+        if ($user->hasRole('humanResources')) {
+            $actions = [$hrApprove, $hrReject];
+        }
 
-            $actions[] = Action::make('reject')
-                ->label('HOD Reject')
-                ->color('danger')
-                ->hidden(function ($record) {
-                    return $record->hod_approval === 'rejected' ? true : false;
-                })
-                ->requiresConfirmation()
-                ->action(function ($record) {
-                    $record->hod_approval = 'rejected';
-                    $record->save();
-                });
+        if ($user->hasRole('manager')) {
+            $actions = [$hodApprove, $hodReject];
         }
         return [
             ActionGroup::make($actions)
                 ->icon('heroicon-m-ellipsis-vertical')
                 ->color('primary')
-                ->dropdown()
+//                ->dropdown()
                 ->iconButton()
         ];
 

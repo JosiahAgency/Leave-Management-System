@@ -40,151 +40,155 @@ class LeaveRequestResource extends Resource
     protected static ?string $model = LeaveRequest::class;
     protected static ?string $navigationIcon = 'heroicon-o-ticket';
 
+    public static function getNavigationBadgeColor(): ?string
+    {
+        $count = LeaveRequest::query()
+            ->where('status', 'Pending')
+            ->count();
+        return $count > 0 ? 'danger' : 'success';
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
+
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Wizard::make([
-                    Forms\Components\Wizard\Step::make('User Details')
-                        ->icon('heroicon-o-user')
-                        ->completedIcon('heroicon-m-hand-thumb-up')
-                        ->schema([
-                            Select::make('userID')
-                                ->label('Staff Name')
-                                ->live()
-                                ->preload()
-                                ->required()
-                                ->searchable()
-                                ->default(fn() => Auth::id())
-                                ->disabled(fn() => Auth::guest() || Auth::user()->hasRole('user'))
-                                ->relationship('user', 'name'),
-                            Forms\Components\Hidden::make('departmentID')
-                                ->label('Department')
-                                ->default(function () {
-                                    $user = Auth::user();
-                                    return $user?->departmentID ?? null;
-                                }),
-                            Select::make('leaveTypeID')
-                                ->preload()
-                                ->required()
-                                ->searchable()
-                                ->relationship('leaveType', 'name')
-                                ->live()
-                                ->afterStateUpdated(function (Set $set, ?string $state) {
-                                    if ($state && $leaveType = LeaveType::find($state)) {
-                                        $set('weekendInclusive', $leaveType->weekendsInclusive);
-                                        $set('numberOfDays', $leaveType->numberOfDays);
-                                    }
-                                }),
-                        ])->columns(2),
+                Forms\Components\Section::make('User Details')
+                    ->icon('heroicon-o-user')
+                    ->schema([
+                        Select::make('userID')
+                            ->label('Staff Name')
+                            ->live()
+                            ->preload()
+                            ->required()
+                            ->searchable()
+                            ->default(fn() => Auth::id())
+                            ->disabled(fn() => Auth::guest() || Auth::user()->hasRole('user'))
+                            ->relationship('user', 'name'),
+                        Forms\Components\Hidden::make('departmentID')
+                            ->label('Department')
+                            ->default(function () {
+                                $user = Auth::user();
+                                return $user?->departmentID ?? null;
+                            }),
+                        Select::make('leaveTypeID')
+                            ->preload()
+                            ->required()
+                            ->searchable()
+                            ->relationship('leaveType', 'name')
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, ?string $state) {
+                                if ($state && $leaveType = LeaveType::find($state)) {
+                                    $set('weekendInclusive', $leaveType->weekendsInclusive);
+                                    $set('numberOfDays', $leaveType->numberOfDays);
+                                }
+                            }),
+                    ])->columns(2),
 
-                    Forms\Components\Wizard\Step::make('Leave Details')
-                        ->icon('heroicon-o-newspaper')
-                        ->completedIcon('heroicon-m-hand-thumb-up')
-                        ->schema([
-                            Fieldset::make('Duration')
-                                ->schema([
-                                    DatePicker::make('startDate')
-                                        ->required()
-                                        ->minDate(now())
-                                        ->disabledDates(function () {
-                                            $user = auth()->user();
+                Forms\Components\Section::make('Leave Details')
+                    ->icon('heroicon-o-newspaper')
+                    ->schema([
+                        Fieldset::make('Duration')
+                            ->schema([
+                                DatePicker::make('startDate')
+                                    ->required()
+                                    ->minDate(now())
+                                    ->disabledDates(function () {
+                                        $user = auth()->user();
 
-                                            $leaveRequests = LeaveRequest::query()
-                                                ->where('id', $user->id)
-                                                ->get(['startDate', 'endDate']);
+                                        $leaveRequests = LeaveRequest::query()
+                                            ->where('id', $user->id)
+                                            ->get(['startDate', 'endDate']);
 
-                                            $disabledDates = [];
+                                        $disabledDates = [];
 
-                                            foreach ($leaveRequests as $leaveRequest) {
-                                                $start = \Carbon\Carbon::parse($leaveRequest->startDate);
-                                                $end = \Carbon\Carbon::parse($leaveRequest->endDate);
+                                        foreach ($leaveRequests as $leaveRequest) {
+                                            $start = \Carbon\Carbon::parse($leaveRequest->startDate);
+                                            $end = \Carbon\Carbon::parse($leaveRequest->endDate);
 //                                                $includeWeekends = strtolower($leaveRequest->weekendInclusive ?? '') === 'Yes';
 
-                                                while ($start->lte($end)) {
-                                                    if (!$start->isWeekend()) {
-                                                        $disabledDates[] = $start->toDateString();
-                                                    }
-                                                    $start->addDay();
+                                            while ($start->lte($end)) {
+                                                if (!$start->isWeekend()) {
+                                                    $disabledDates[] = $start->toDateString();
                                                 }
+                                                $start->addDay();
                                             }
+                                        }
 
-                                            return $disabledDates;
-                                        })
-                                        ->weekStartsOnSunday()
-                                        ->reactive()
-                                        ->native(false)
-                                        ->afterStateUpdated(function (Set $set, ?string $state, $get) {
-                                            if ($state && $get('numberOfDays')) {
-                                                $startDate = Carbon::parse($state);
-                                                $numberOfDays = (int)$get('numberOfDays');
-                                                $weekendInclusive = $get('weekendInclusive') === 'Yes';
+                                        return $disabledDates;
+                                    })
+                                    ->weekStartsOnSunday()
+                                    ->reactive()
+                                    ->native(false)
+                                    ->afterStateUpdated(function (Set $set, ?string $state, $get) {
+                                        if ($state && $get('numberOfDays')) {
+                                            $startDate = Carbon::parse($state);
+                                            $numberOfDays = (int)$get('numberOfDays');
+                                            $weekendInclusive = $get('weekendInclusive') === 'Yes';
 
-                                                if ($weekendInclusive) {
-                                                    $endDate = $startDate->copy()->addDays($numberOfDays - 1)->toDateString();
-                                                } else {
-                                                    $count = 0;
-                                                    $endDate = $startDate->copy();
-                                                    while ($count < $numberOfDays) {
-                                                        if (!$endDate->isWeekend()) {
-                                                            $count++;
-                                                        }
-                                                        if ($count < $numberOfDays) {
-                                                            $endDate->addDay();
-                                                        }
+                                            if ($weekendInclusive) {
+                                                $endDate = $startDate->copy()->addDays($numberOfDays - 1)->toDateString();
+                                            } else {
+                                                $count = 0;
+                                                $endDate = $startDate->copy();
+                                                while ($count < $numberOfDays) {
+                                                    if (!$endDate->isWeekend()) {
+                                                        $count++;
                                                     }
-                                                    $endDate = $endDate->toDateString();
+                                                    if ($count < $numberOfDays) {
+                                                        $endDate->addDay();
+                                                    }
                                                 }
+                                                $endDate = $endDate->toDateString();
+                                            }
+                                            $set('endDate', $endDate);
+                                        }
+                                    }),
+                                TextInput::make('weekendInclusive')
+                                    ->disabled(),
+                                TextInput::make('numberOfDays')
+                                    ->required()
+                                    ->numeric()
+                                    ->reactive()
+                                    ->afterStateUpdated(function (Set $set, ?string $state, $get) {
+                                        if ($state && $get('startDate')) {
+                                            $startDate = Carbon::parse($get('startDate'));
+                                            $numberOfDays = $state;
+
+                                            if ($get('weekendInclusive') === 'Yes') {
+                                                $endDate = $startDate->copy()->addDays($numberOfDays - 1)->toDateString();
                                                 $set('endDate', $endDate);
-                                            }
-                                        }),
-                                    TextInput::make('weekendInclusive')
-                                        ->disabled(),
-                                    TextInput::make('numberOfDays')
-                                        ->required()
-                                        ->numeric()
-                                        ->reactive()
-                                        ->afterStateUpdated(function (Set $set, ?string $state, $get) {
-                                            if ($state && $get('startDate')) {
-                                                $startDate = Carbon::parse($get('startDate'));
-                                                $numberOfDays = $state;
 
-                                                if ($get('weekendInclusive') === 'Yes') {
-                                                    $endDate = $startDate->copy()->addDays($numberOfDays - 1)->toDateString();
-                                                    $set('endDate', $endDate);
-
-                                                } else {
-                                                    $count = 0;
-                                                    $endDate = $startDate->copy();
-                                                    while ($count < $numberOfDays) {
-                                                        if (!$endDate->isWeekend()) {
-                                                            $count++;
-                                                        }
-                                                        if ($count < $numberOfDays) {
-                                                            $endDate->addDay();
-                                                        }
+                                            } else {
+                                                $count = 0;
+                                                $endDate = $startDate->copy();
+                                                while ($count < $numberOfDays) {
+                                                    if (!$endDate->isWeekend()) {
+                                                        $count++;
                                                     }
-                                                    $endDate = $endDate->toDateString();
+                                                    if ($count < $numberOfDays) {
+                                                        $endDate->addDay();
+                                                    }
                                                 }
-                                                $set('endDate', $endDate);
+                                                $endDate = $endDate->toDateString();
                                             }
-                                        }),
-                                    DatePicker::make('endDate')
-                                        ->required()
-                                        ->disabled()
-                                        ->dehydrated(),]),
-                            Forms\Components\Hidden::make('status')
-                                ->default('Pending'),
-//                                                        Select::make('status')
-//                                                                ->label('Request Status')
-//                                                                ->options([
-//                                                                        'Pending' => 'Pending',
-//                                                                        'Denied' => 'Denied',
-//                                                                        'Granted' => 'Granted',
-//                                                                ])
-//                                                                ->disabled()
-//                                                                ->default('Pending'),
-                            MarkdownEditor::make('reason'),]),])->columnSpanFull(),]);
+                                            $set('endDate', $endDate);
+                                        }
+                                    }),
+                                DatePicker::make('endDate')
+                                    ->required()
+                                    ->disabled()
+                                    ->dehydrated(),]),
+                        Forms\Components\Hidden::make('status')
+                            ->default('Pending'),
+                        MarkdownEditor::make('reason'),
+                    ]),
+            ]);
     }
 
     public

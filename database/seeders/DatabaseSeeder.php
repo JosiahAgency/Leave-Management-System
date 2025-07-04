@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
                         LeaveTypesSeeder::class,
                         RolesSeeder::class,
                         UserSeeder::class,
-                        LeaveRequests::class,
+//                        LeaveRequests::class,
                 ]);
         }
 }
